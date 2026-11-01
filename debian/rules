@@ -1,0 +1,18 @@
+#!/usr/bin/make -f
+
+export DH_GOPKG := dnsupdate
+export CGO_ENABLED := 0
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	go build -ldflags="-s -w" -o dnsupdate ./cmd/dnsupdate
+
+override_dh_auto_install:
+	install -D -m 0755 dnsupdate debian/dnsupdate/usr/bin/dnsupdate
+	install -D -m 0644 debian/dnsupdate.service debian/dnsupdate/usr/lib/systemd/system/dnsupdate.service
+	install -D -m 0644 debian/dnsupdate.timer debian/dnsupdate/usr/lib/systemd/system/dnsupdate.timer
+	install -d -m 0700 debian/dnsupdate/etc/dnsupdate
+	install -D -m 0644 examples/config.toml.example debian/dnsupdate/usr/share/doc/dnsupdate/examples/config.toml.example
+	install -D -m 0644 examples/timer-interval.conf debian/dnsupdate/usr/share/doc/dnsupdate/examples/timer-interval.conf

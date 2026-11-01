@@ -1,0 +1,10 @@
+# Binaries
+/dnsupdate
+/dnsupdate.test
+
+# Build and packaging output
+/dist/
+*.deb
+*.tar.gz
+*.sha256
+*.sum

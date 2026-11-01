@@ -1,0 +1,16 @@
+Source: dnsupdate
+Section: net
+Priority: optional
+Maintainer: Bipin Kumar <kbipinkumar@pm.me>
+Build-Depends: debhelper-compat (= 13), golang-go
+Standards-Version: 4.6.2
+Rules-Requires-Root: no
+Homepage: https://github.com/kbipinkumar/dnsupdate
+
+Package: dnsupdate
+Architecture: linux-any
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Description: RFC 2136 dynamic DNS update client for Linux
+ dnsupdate publishes the host's A and AAAA records using TSIG-signed
+ RFC 2136 updates over TCP, with automated route-based IP detection
+ and systemd timer integration.

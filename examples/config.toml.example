@@ -1,0 +1,40 @@
+# /etc/dnsupdate/config.toml
+#
+# Configuration file for dnsupdate.
+# Permissions must be 0600 (owner read/write only).
+# The directory /etc/dnsupdate must have 0700 permissions.
+#
+# You can generate this interactively by running:
+#   sudo dnsupdate setup
+
+# DNS server address (IPv4 or IPv6) and port (default 53)
+server = "192.168.1.1"
+port = 53
+
+# DNS zone and record owner name (FQDN or relative name)
+zone = "example.com."
+domain = "myhost.example.com."
+
+# Record TTL in seconds (default 3600)
+ttl = 3600
+
+# Timer interval (used by systemd timer or interactive setup)
+interval = "5m"
+
+# ------------------------------------------------------------------------------
+# TSIG Authentication Option 1: Inline Key
+# ------------------------------------------------------------------------------
+key_name = "local-ddns-key."
+key_algorithm = "hmac-sha256"
+key_secret = "REPLACE_WITH_BASE64_SECRET"
+
+# ------------------------------------------------------------------------------
+# TSIG Authentication Option 2: BIND Key File
+# ------------------------------------------------------------------------------
+# If specified, key_file overrides key_name, key_algorithm, and key_secret above.
+# Format:
+#   key "local-ddns-key" {
+#       algorithm hmac-sha256;
+#       secret "base64secret...";
+#   };
+# key_file = "/etc/dnsupdate/Kexample.com.+165+12345.key"

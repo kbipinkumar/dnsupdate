@@ -1,0 +1,21 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    configure)
+        # Ensure /etc/dnsupdate exists with 0700 permissions
+        mkdir -p /etc/dnsupdate
+        chmod 0700 /etc/dnsupdate
+
+        if [ -d /run/systemd/system ]; then
+            systemctl --system daemon-reload >/dev/null || true
+            if [ -z "$2" ]; then
+                # First installation: enable timer
+                systemctl enable dnsupdate.timer >/dev/null || true
+            fi
+            systemctl start dnsupdate.timer >/dev/null || true
+        fi
+        ;;
+esac
+
+exit 0
