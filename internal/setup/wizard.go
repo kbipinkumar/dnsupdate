@@ -16,13 +16,16 @@ import (
 
 // Wizard edits f with a form. Flags should already be copied into f.
 // configPath is used to resolve a relative BIND key file.
-func Wizard(f *Fields, configPath string) error {
+// generateDefault starts the "generate a random secret" confirm at Yes.
+// The returned secret is non-empty only when this run created one.
+func Wizard(f *Fields, configPath string, generateDefault bool) (string, error) {
 	if norm, err := config.NormalizeAlgorithm(f.KeyAlgorithm); err == nil {
 		f.KeyAlgorithm = strings.TrimSuffix(norm, ".")
 	} else {
 		f.KeyAlgorithm = config.Defaults().KeyAlgorithm
 	}
 
+	generate := generateDefault
 	form := huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().Title("DNS server IP").Value(&f.Server).Validate(required("server")),
@@ -54,28 +57,52 @@ func Wizard(f *Fields, configPath string) error {
 					huh.NewOption("hmac-sha512", "hmac-sha512"),
 				).
 				Value(&f.KeyAlgorithm),
+		),
+		huh.NewGroup(
+			huh.NewConfirm().
+				Title("Generate a random TSIG secret?").
+				Description("Copy the new secret to the DNS server. It replaces any secret already stored.").
+				Affirmative("Yes").
+				Negative("No").
+				Value(&generate),
+		).WithHideFunc(func() bool {
+			return strings.TrimSpace(f.KeyFile) != ""
+		}),
+		huh.NewGroup(
 			huh.NewInput().
 				Title("TSIG secret (base64)").
 				EchoMode(huh.EchoModePassword).
 				Value(&f.KeySecret).
 				Validate(func(s string) error {
-					if strings.TrimSpace(s) == "" && strings.TrimSpace(f.KeyFile) == "" {
-						return fmt.Errorf("TSIG secret or key file is required")
+					if generate || strings.TrimSpace(f.KeyFile) != "" {
+						if strings.TrimSpace(s) == "" {
+							return nil
+						}
 					}
 					if strings.TrimSpace(s) == "" {
-						return nil
+						return fmt.Errorf("TSIG secret or key file is required")
 					}
 					if _, err := base64.StdEncoding.DecodeString(strings.TrimSpace(s)); err != nil {
 						return fmt.Errorf("secret must be base64")
 					}
 					return nil
 				}),
-		),
+		).WithHideFunc(func() bool {
+			return generate || strings.TrimSpace(f.KeyFile) != ""
+		}),
 	)
 	if err := form.Run(); err != nil {
-		return err
+		return "", err
 	}
-	return nil
+	if strings.TrimSpace(f.KeyFile) != "" || !generate {
+		return "", nil
+	}
+	secret, err := config.GenerateSecret(f.KeyAlgorithm)
+	if err != nil {
+		return "", err
+	}
+	f.KeySecret = secret
+	return secret, nil
 }
 
 func required(field string) func(string) error {
