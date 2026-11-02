@@ -101,6 +101,20 @@ sudo dnsupdate setup --non-interactive \
   --generate-key
 ```
 
+#### TSIG algorithms (`--key-algorithm`)
+
+`--key-algorithm` accepts one of these names. The same names are the choices in the setup wizard and the `key_algorithm` field in the config file. Matching is case-insensitive, and a trailing dot is ignored. The default is `hmac-sha256`.
+
+| `--key-algorithm` | Hash | Generated secret (`--generate-key`) | TSIG MAC length |
+| --- | --- | --- | --- |
+| `hmac-sha1` | SHA-1 | 20 bytes (160 bits) | 20 bytes |
+| `hmac-sha224` | SHA-224 | 28 bytes (224 bits) | 28 bytes |
+| `hmac-sha256` | SHA-256 | 32 bytes (256 bits) | 32 bytes |
+| `hmac-sha384` | SHA-384 | 48 bytes (384 bits) | 48 bytes |
+| `hmac-sha512` | SHA-512 | 64 bytes (512 bits) | 64 bytes |
+
+`hmac-sha256` is the default. `--generate-key` and the wizard's random-secret confirm use the secret size in this table, which matches BIND `tsig-keygen`. A longer hash produces a longer MAC and a longer generated secret. The DNS server must be configured with the same algorithm and the same secret.
+
 ### 2. Inspect Configuration
 View the configuration file with the TSIG secret safely redacted:
 ```bash
