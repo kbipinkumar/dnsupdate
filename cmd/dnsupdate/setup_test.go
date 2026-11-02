@@ -96,4 +96,14 @@ func TestSetupGenerateKeyConflicts(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "key file") {
 		t.Fatalf("got %v", err)
 	}
+
+	err = cmdSetup([]string{
+		"--non-interactive",
+		"--config", path,
+		"--generate-key",
+		"--key-file", "Kexample.key",
+	})
+	if err == nil || !strings.Contains(err.Error(), "cannot be combined with --key-secret or --key-file") {
+		t.Fatalf("got %v", err)
+	}
 }

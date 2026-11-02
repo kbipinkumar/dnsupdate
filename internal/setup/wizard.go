@@ -94,7 +94,10 @@ func Wizard(f *Fields, configPath string, generateDefault bool) (string, error) 
 	if err := form.Run(); err != nil {
 		return "", err
 	}
-	if strings.TrimSpace(f.KeyFile) != "" || !generate {
+	if generate && strings.TrimSpace(f.KeyFile) != "" {
+		return "", fmt.Errorf("--generate-key cannot be used with a key file")
+	}
+	if !generate {
 		return "", nil
 	}
 	secret, err := config.GenerateSecret(f.KeyAlgorithm)

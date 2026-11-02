@@ -191,7 +191,9 @@ func cmdSetup(args []string) error {
 	}
 	fmt.Printf("Wrote %s\n", path)
 	if generated != "" {
-		fmt.Printf("Generated TSIG secret (copy this to the DNS server; it will not be shown again):\n%s\n", generated)
+		if _, err := fmt.Printf("Generated TSIG secret (copy this to the DNS server; it will not be shown again):\n%s\n", generated); err != nil {
+			return fmt.Errorf("print generated TSIG secret: %w", err)
+		}
 	}
 	return nil
 }
