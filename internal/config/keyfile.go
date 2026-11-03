@@ -1,10 +1,13 @@
 package config
 
 import (
+	"crypto/rand"
 	"encoding/base64"
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/miekg/dns"
 )
 
 var (
@@ -44,4 +47,39 @@ func stripSpace(s string) string {
 
 func decodeSecret(secret string) ([]byte, error) {
 	return base64.StdEncoding.DecodeString(stripSpace(secret))
+}
+
+// GenerateSecret returns a new base64 TSIG secret sized to the HMAC output
+// of algorithm (the same lengths BIND tsig-keygen uses).
+func GenerateSecret(algorithm string) (string, error) {
+	norm, err := NormalizeAlgorithm(algorithm)
+	if err != nil {
+		return "", err
+	}
+	n, err := secretLen(norm)
+	if err != nil {
+		return "", err
+	}
+	buf := make([]byte, n)
+	if _, err := rand.Read(buf); err != nil {
+		return "", fmt.Errorf("generate key secret: %w", err)
+	}
+	return base64.StdEncoding.EncodeToString(buf), nil
+}
+
+func secretLen(algorithm string) (int, error) {
+	switch algorithm {
+	case dns.HmacSHA1:
+		return 20, nil
+	case dns.HmacSHA224:
+		return 28, nil
+	case dns.HmacSHA256:
+		return 32, nil
+	case dns.HmacSHA384:
+		return 48, nil
+	case dns.HmacSHA512:
+		return 64, nil
+	default:
+		return 0, fmt.Errorf("unsupported key algorithm %q", strings.TrimSuffix(algorithm, "."))
+	}
 }

@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"dnsupdate/internal/config"
@@ -33,8 +34,9 @@ Default config: /etc/dnsupdate/config.toml
 Override with --config or the DNSUPDATE_CONFIG environment variable.
 
 setup writes a mode 0600 config. Prefer the interactive wizard so the TSIG
-secret is not stored in shell history. run performs one update and is the
-command executed by the systemd timer.
+secret is not stored in shell history. --generate-key mints a random base64
+secret and prints it once. run performs one update and is the command
+executed by the systemd timer.
 `
 
 func main() {
@@ -88,9 +90,10 @@ func cmdSetup(args []string) error {
 	keyAlgo := fs.String("key-algorithm", "", "TSIG algorithm: hmac-sha1, hmac-sha224, hmac-sha256, hmac-sha384, hmac-sha512")
 	keySecret := fs.String("key-secret", "", "base64 TSIG secret")
 	keyFile := fs.String("key-file", "", "BIND TSIG key file; overrides name, algorithm, and secret")
+	generateKey := fs.Bool("generate-key", false, "generate a random base64 TSIG secret; printed once after the config is written")
 	nonInteractive := fs.Bool("non-interactive", false, "write the config from flags without the form")
 	fs.Usage = func() {
-		fmt.Fprintf(fs.Output(), "Usage: dnsupdate setup [flags]\n\nFlags prefill the wizard. --non-interactive writes the file without a form.\n\n")
+		fmt.Fprintf(fs.Output(), "Usage: dnsupdate setup [flags]\n\nFlags prefill the wizard. --non-interactive writes the file without a form.\n--generate-key mints a random base64 TSIG secret sized for the key algorithm.\nIn the wizard it starts the confirm at Yes. The secret is printed once after the config is written and is not shown again.\n\n")
 		fs.PrintDefaults()
 	}
 	if err := fs.Parse(args); err != nil {
@@ -103,6 +106,9 @@ func cmdSetup(args []string) error {
 	path := config.PathFrom(*configPath)
 	set := map[string]bool{}
 	fs.Visit(func(f *flag.Flag) { set[f.Name] = true })
+	if *generateKey && (set["key-secret"] || set["key-file"]) {
+		return fmt.Errorf("--generate-key cannot be combined with --key-secret or --key-file")
+	}
 
 	cfg := config.Defaults()
 	if existing, err := config.Read(path); err == nil {
@@ -140,7 +146,7 @@ func cmdSetup(args []string) error {
 		fields.KeyFile = *keyFile
 	}
 
-	valueSet := false
+	valueSet := *generateKey
 	for _, name := range []string{"server", "port", "zone", "domain", "ttl", "interval", "key-name", "key-algorithm", "key-secret", "key-file"} {
 		if set[name] {
 			valueSet = true
@@ -154,10 +160,23 @@ func cmdSetup(args []string) error {
 	if interactive && !isTerminal(os.Stdin) {
 		return fmt.Errorf("setup needs a terminal, or --non-interactive with the required flags")
 	}
+	var generated string
 	if interactive {
-		if err := setup.Wizard(&fields, path); err != nil {
+		var err error
+		generated, err = setup.Wizard(&fields, path, *generateKey)
+		if err != nil {
 			return err
 		}
+	} else if *generateKey {
+		if strings.TrimSpace(fields.KeyFile) != "" {
+			return fmt.Errorf("--generate-key cannot be used with a key file")
+		}
+		secret, err := config.GenerateSecret(fields.KeyAlgorithm)
+		if err != nil {
+			return err
+		}
+		fields.KeySecret = secret
+		generated = secret
 	}
 
 	parsed, err := setup.Parse(fields)
@@ -171,6 +190,11 @@ func cmdSetup(args []string) error {
 		return err
 	}
 	fmt.Printf("Wrote %s\n", path)
+	if generated != "" {
+		if _, err := fmt.Printf("Generated TSIG secret (copy this to the DNS server; it will not be shown again):\n%s\n", generated); err != nil {
+			return fmt.Errorf("print generated TSIG secret: %w", err)
+		}
+	}
 	return nil
 }
 
