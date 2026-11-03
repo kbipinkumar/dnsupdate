@@ -3,7 +3,6 @@
 RFC 2136 dynamic DNS update client for Linux that publishes the host's A and AAAA records in a single atomic, TSIG-signed DNS transaction.
 
 [![License: GPL-2.0](https://img.shields.io/badge/License-GPL%202.0-blue.svg)](LICENSE)
-[![Go Report Card](https://goreportcard.com/badge/github.com/kbipinkumar/dnsupdate)](https://goreportcard.com/report/github.com/kbipinkumar/dnsupdate)
 
 ---
 
